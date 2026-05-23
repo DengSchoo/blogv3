@@ -1,3 +1,179 @@
 @use "./base.scss";
 
-// put your custom CSS here!
+// ─── 字体回退链 ───────────────────────────────────
+// 拉丁字符走 Geist（typography 加载），CN fallback 到 Noto Sans SC（ExtraFonts 加载）
+:root {
+  --bodyFont:
+    "Geist", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --headerFont:
+    "Geist", "Noto Sans SC", -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+}
+
+// ─── 顶部阅读进度条 ───────────────────────────────
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: var(--read-progress, 0%);
+  background: var(--secondary);
+  z-index: 1000;
+  transition: width 0.1s linear;
+  pointer-events: none;
+}
+
+// ─── 代码块行号（CSS counter，所有代码块自动加） ─────
+article pre > code {
+  counter-reset: line;
+  display: grid; // rehype-pretty-code 把每行包成 <span class="line">
+}
+
+article pre > code > .line {
+  counter-increment: line;
+  padding-left: 2.5rem;
+  position: relative;
+
+  &::before {
+    content: counter(line);
+    position: absolute;
+    left: 0;
+    width: 1.8rem;
+    text-align: right;
+    color: var(--gray);
+    user-select: none;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// 行内代码不要行号
+article :not(pre) > code {
+  counter-reset: none;
+  display: inline;
+  padding-left: 0;
+}
+article :not(pre) > code::before {
+  display: none;
+}
+
+
+// 正文宽度收窄到 720px，更适合中文长行
+.page > article {
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+// 段落更通透
+article p {
+  line-height: 1.8;
+  margin: 1.1em 0;
+}
+
+// 代码块圆角 + 边框
+article :not(pre) > code,
+article pre {
+  border-radius: 6px;
+}
+
+article pre {
+  border: 1px solid var(--lightgray);
+  padding: 0.9rem 1rem;
+}
+
+// ─── 图片排版增强 ───────────────────────────────
+
+// 默认给所有文章图加阴影 + 细边框（截图友好）
+article img {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--lightgray);
+  cursor: zoom-in;
+}
+
+// 悬停轻微放大——只对非放大态生效，避免和 medium-zoom 自己的 transform 打架
+article img:not(.medium-zoom-image--opened) {
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: scale(1.02);
+  }
+}
+
+// 居中包裹：写 <div class="image-center"> ![[xxx.png]] </div>
+.image-center {
+  text-align: center;
+
+  img {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+// 多图并排（画廊行模式）：固定高度 + 宽度按原始比例自适应，类似 Flickr / Google Photos
+// 用法：<div class="image-row"> ![[a]] ![[b]] ![[c]] </div>
+.image-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 1rem 0;
+
+  // markdown 解析会把每张图包进 <p>，让它隐形
+  p {
+    display: contents;
+  }
+
+  img {
+    height: 200px; // 全行统一高度
+    width: auto; // 宽度由浏览器按图原始比例自动算
+    margin: 0;
+    object-fit: contain; // 保险，避免任何拉伸
+    flex: 0 0 auto; // 不参与拉伸，保持自然尺寸
+  }
+}
+
+// 瀑布流模式（Pinterest 风格，列式布局）：图多时更紧凑
+// 推荐用裸 <img> 写法，提供 width/height 让浏览器预知尺寸：
+//   <div class="image-masonry">
+//   <img src="..." width="600" height="800">
+//   ...
+//   </div>
+.image-masonry {
+  column-count: 3;
+  column-gap: 8px;
+  margin: 1rem 0;
+
+  // 同时兼容 <p><img></p>（markdown 自动包裹）和裸 <img> 两种结构
+  > p,
+  > img {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 0 0 8px;
+    display: block;
+  }
+
+  img {
+    width: 100%;
+    height: auto;
+  }
+
+  // 移动端降为 2 列
+  @media (max-width: 600px) {
+    column-count: 2;
+  }
+}
+
+// ─── medium-zoom lightbox 样式 ───────────────────
+// 放大态完全交给 medium-zoom 控制 transform，这里只调 z-index 和指针样式
+.medium-zoom-overlay {
+  z-index: 100;
+}
+.medium-zoom-image--opened {
+  z-index: 101;
+  cursor: zoom-out;
+  // 放大态去掉边框/圆角/阴影，纯净显示（注意：不要动 transform）
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}

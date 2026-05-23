@@ -1,11 +1,37 @@
 import { PageLayout, SharedLayout } from "./quartz/cfg"
 import * as Component from "./quartz/components"
+// 自定义组件：不通过 Component.* 引用，避免修改上游 components/index.ts
+import EnhancementsCtor from "./quartz/components/Enhancements"
+const Enhancements = EnhancementsCtor
 
 // components shared across all pages
 export const sharedPageComponents: SharedLayout = {
   head: Component.Head(),
   header: [],
-  afterBody: [],
+  afterBody: [
+    Enhancements(),
+    Component.ConditionalRender({
+      component: Component.RecentNotes({
+        title: "最近更新",
+        limit: 5,
+        showTags: true,
+        filter: (f) => f.slug?.startsWith("posts/") ?? false,
+      }),
+      condition: (page) => page.fileData.slug === "index",
+    }),
+    Component.Comments({
+      provider: "giscus",
+      options: {
+        repo: "DengSchoo/giscus_repo",
+        repoId: "R_kgDOSl4OKw",
+        category: "Announcements",
+        categoryId: "DIC_kwDOSl4OK84C9r9l",
+        mapping: "pathname",
+        strict: false,
+        lang: "zh-CN",
+      },
+    }),
+  ],
   footer: Component.Footer({
     links: {
       GitHub: "https://github.com/jackyzha0/quartz",
