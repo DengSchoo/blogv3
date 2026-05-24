@@ -359,11 +359,15 @@ article img:not(.medium-zoom-image--opened) {
 
 // ─── medium-zoom lightbox 样式 ───────────────────
 // 放大态完全交给 medium-zoom 控制 transform，这里只调 z-index 和指针样式
+// 用极高 z-index 防御性盖过 dappled-light / reading-progress / 任何其他 fixed 元素
+// 显式 pointer-events: auto 抵抗祖先的 pointer-events: none 继承
 .medium-zoom-overlay {
-  z-index: 100;
+  z-index: 10000 !important;
+  pointer-events: auto !important;
 }
 .medium-zoom-image--opened {
-  z-index: 101;
+  z-index: 10001 !important;
+  pointer-events: auto !important;
   cursor: zoom-out;
   // 放大态去掉边框/圆角/阴影，纯净显示（注意：不要动 transform）
   border: none;
