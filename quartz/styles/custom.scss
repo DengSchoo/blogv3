@@ -489,8 +489,15 @@ article img {
 // 组件：右上角光源 glow / 反弹光 glow-bounce / 透视的树叶 + 百叶窗 / 渐进模糊
 // body.animation-ready 类由 themechange 事件后加上，触发日出/日落颜色补间
 
+// quartz-root：positioned 但不创建新 stacking context
+// - position: relative 让它参与 body 的 positioned stacking（与 dappled-light 同级竞争）
+// - 不设 z-index → 不创建新 stacking context → 内部 medium-zoom 图 z-index 直达 body 层
+// - 源序在 dappled-light 之后 → 默认画在上方
+//
+// 注意：不要加 isolation: isolate 或 z-index 数值，会把 medium-zoom 放大图困死
+// 导致 body 级别的 overlay (z=100) 反而盖在图片上方，lightbox 关不掉
 #quartz-root {
-  isolation: isolate;
+  position: relative;
 }
 
 #dappled-light {
