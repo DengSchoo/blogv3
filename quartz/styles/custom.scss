@@ -11,7 +11,77 @@
     "Microsoft YaHei", sans-serif;
 }
 
-// ─── 顶部阅读进度条 ───────────────────────────────
+// ─── 无障碍：尊重 prefers-reduced-motion ──────────
+// 仅针对装饰性动画/过渡禁用；不动 medium-zoom 等依赖 transition 事件触发回调的组件
+@media (prefers-reduced-motion: reduce) {
+  // 装饰性微交互
+  article img:not(.medium-zoom-image):not(.medium-zoom-image--opened):hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  .reading-progress {
+    transition: none !important;
+  }
+  // 锚点 / 链接 / 标题等纯装饰过渡
+  article a,
+  article :is(h1, h2, h3, h4, h5, h6) > a[role="anchor"] {
+    transition: none !important;
+  }
+  // 全局滚动行为
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+// ─── 标题字号 + 字距系统 ──────────────────────────
+// Geist 这种几何无衬线需要负字距让大字号收紧，产生 Linear / Vercel docs 那种"产品文档"质感
+article {
+  h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-top: 0;
+    margin-bottom: 0.6em;
+  }
+  h2 {
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+    margin-top: 2.5em;
+    margin-bottom: 0.6em;
+  }
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-top: 2em;
+    margin-bottom: 0.5em;
+  }
+  h4 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-top: 1.8em;
+    margin-bottom: 0.4em;
+  }
+}
+
+// ─── 链接：细下划线 + hover 加重 ──────────────────
+article a:not(.internal):not(.tag-link):not([role="anchor"]),
+article a.internal {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, var(--secondary) 30%, transparent);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
+
+  &:hover {
+    text-decoration-color: var(--secondary);
+  }
+}
+
+// 顶部阅读进度条
 .reading-progress {
   position: fixed;
   top: 0;
@@ -57,6 +127,24 @@ article :not(pre) > code::before {
   display: none;
 }
 
+// ─── 代码块语言徽章（左上角小字显示语言） ──────────
+article figure[data-rehype-pretty-code-figure] {
+  position: relative;
+
+  &::before {
+    content: attr(data-language);
+    position: absolute;
+    top: 0.55rem;
+    right: 3rem; // 让位给右上角的复制按钮
+    font-size: 0.68rem;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--codeFont);
+    pointer-events: none;
+    user-select: none;
+  }
+}
 
 // 正文宽度收窄到 720px，更适合中文长行
 .page > article {
@@ -80,6 +168,47 @@ article pre {
 article pre {
   border: 1px solid var(--lightgray);
   padding: 0.9rem 1rem;
+}
+
+// ─── blockquote 增加底色 + 圆角 ───────────────────
+article blockquote:not([data-callout]) {
+  font-size: 1.05rem;
+  line-height: 1.75;
+  padding: 0.6em 1.2em;
+  margin: 1.5em 0;
+  border-left: 3px solid var(--secondary);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--secondary) 6%, transparent);
+  color: color-mix(in srgb, var(--darkgray) 92%, transparent);
+
+  & > p {
+    margin: 0.4em 0;
+  }
+}
+
+// ─── 标题锚点 hover 显示 # ────────────────────────
+// rehype-autolink-headings 已在 h2-h6 末尾追加 <a role="anchor"> 含 svg
+// 默认隐藏，hover 标题时浮出
+article :is(h1, h2, h3, h4, h5, h6) {
+  position: relative;
+
+  & > a[role="anchor"] {
+    opacity: 0;
+    margin-left: 0.4em;
+    transition: opacity 0.2s ease;
+    color: var(--gray);
+
+    svg {
+      vertical-align: middle;
+      width: 0.7em;
+      height: 0.7em;
+    }
+  }
+
+  &:hover > a[role="anchor"],
+  & > a[role="anchor"]:focus-visible {
+    opacity: 1;
+  }
 }
 
 // ─── 图片排版增强 ───────────────────────────────

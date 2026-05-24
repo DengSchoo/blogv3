@@ -31,7 +31,7 @@ const config: QuartzConfig = {
         lightMode: {
           light: "#fdfaf6",
           lightgray: "#e5dfd5",
-          gray: "#b5ab9a",
+          gray: "#8a8073", // 从 #b5ab9a 调深以满足 WCAG 4.5:1 对比度（用于行号、时间、辅助文字）
           darkgray: "#4a3f33",
           dark: "#2d2418",
           secondary: "#a85751",
