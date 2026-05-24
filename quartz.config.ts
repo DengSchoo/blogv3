@@ -74,6 +74,8 @@ const config: QuartzConfig = {
       Plugin.Latex({ renderEngine: "katex" }),
       // 本地图自动注入 width/height + lazy loading；远程图交给 Enhancements 客户端脚本兜底
       Plugin.ImageDimensions(),
+      // 补 CrawlLinks 的媒体盲区：<source>/<track> 路径修正，+ 默认 controls / preload
+      Plugin.MediaPaths(),
       // 额外加载 Noto Serif SC 作为中文 fallback（typography 槽位已被英文字体占满）
       Plugin.ExtraFonts(),
     ],

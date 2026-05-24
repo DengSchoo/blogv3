@@ -31,6 +31,21 @@
   html {
     scroll-behavior: auto !important;
   }
+  // 新增动效一律禁用过渡 / 动画
+  article img {
+    transition: none !important;
+    opacity: 1 !important; // 直接显示，跳过淡入
+  }
+  .toc-content a,
+  .back-to-top,
+  .toast,
+  article a.tag-link,
+  .breadcrumb-container a {
+    transition: none !important;
+  }
+  .clipboard-button.bounce {
+    animation: none !important;
+  }
 }
 
 // ─── 标题字号 + 字距系统 ──────────────────────────
@@ -79,6 +94,21 @@ article a.internal {
   &:hover {
     text-decoration-color: var(--secondary);
   }
+}
+
+// ─── 外链标识 ↗ ───────────────────────────────────
+// 跟在链接文字后的小箭头，区分外链 vs 站内 wikilink
+// Quartz 的 CrawlLinks 已给站内链接打 .internal，无需手动维护 baseUrl
+article a[href^="http"]:not(.internal):not(.tag-link)::after,
+article a[href^="//"]:not(.internal):not(.tag-link)::after {
+  content: "↗";
+  font-size: 0.75em;
+  color: var(--gray);
+  font-weight: normal;
+  margin-left: 0.15em;
+  vertical-align: super;
+  text-decoration: none;
+  line-height: 1;
 }
 
 // 顶部阅读进度条
@@ -268,9 +298,14 @@ article img:not(.medium-zoom-image--opened) {
 //   ...
 //   </div>
 .image-masonry {
-  column-count: 3;
-  column-gap: 8px;
-  margin: 1rem 0;
+  // 列数单一事实来源；JS 读它决定连续切分的列数
+  --masonry-cols: 3;
+  --masonry-gap-x: 8px; // 横向（列间）
+  --masonry-gap-y: 8px; // 纵向（行内）
+
+  column-count: var(--masonry-cols);
+  column-gap: var(--masonry-gap-x);
+  margin: 1.75rem 0;
 
   // 同时兼容 <p><img></p>（markdown 自动包裹）和裸 <img> 两种结构
   > p,
@@ -278,7 +313,7 @@ article img:not(.medium-zoom-image--opened) {
     break-inside: avoid;
     -webkit-column-break-inside: avoid;
     page-break-inside: avoid;
-    margin: 0 0 8px;
+    margin: 0 0 var(--masonry-gap-y);
     display: block;
   }
 
@@ -287,9 +322,38 @@ article img:not(.medium-zoom-image--opened) {
     height: auto;
   }
 
-  // 移动端降为 2 列
+  // 移动端降为 2 列，间距同步缩小避免太挤
   @media (max-width: 600px) {
-    column-count: 2;
+    --masonry-cols: 2;
+    --masonry-gap-x: 6px;
+    --masonry-gap-y: 6px;
+  }
+
+  // JS 升级后切换为 flex 列布局：按源序连续切分，DP 求最优
+  &.js-packed {
+    display: flex;
+    // 注意：不要再单独写 column-gap，它会覆盖 gap 简写的列间值
+    gap: var(--masonry-gap-y) var(--masonry-gap-x); // row-gap col-gap
+
+    .masonry-col {
+      flex: 1 1 0;
+      display: flex;
+      flex-direction: column;
+      gap: var(--masonry-gap-y);
+      min-width: 0;
+    }
+
+    .masonry-col > p {
+      display: block;
+      margin: 0;
+    }
+    .masonry-col > img,
+    .masonry-col > p > img {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin: 0;
+    }
   }
 }
 
@@ -305,4 +369,399 @@ article img:not(.medium-zoom-image--opened) {
   border: none;
   border-radius: 0;
   box-shadow: none;
+}
+
+// ─── 动效：图片加载淡入 ──────────────────────────
+article img {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+
+  &.loaded {
+    opacity: 1;
+  }
+}
+
+// 兼容 medium-zoom 的克隆图：克隆出来的图不带 .loaded class，但 medium-zoom 会显示它
+.medium-zoom-image {
+  opacity: 1 !important;
+}
+
+// ─── 动效：ToC 当前章节高亮 ──────────────────────
+// Quartz 的 toc.inline.ts 已自动给可见的 ToC 项加 .in-view class（IntersectionObserver）
+// 这里只补样式：当前章节加色 + 加粗 + 左侧竖条
+.toc-content {
+  a {
+    transition: color 0.2s ease, border-color 0.2s ease, padding-left 0.2s ease;
+    border-left: 2px solid transparent;
+    padding-left: 0.5rem;
+    display: block;
+
+    &.in-view {
+      color: var(--secondary);
+      border-left-color: var(--secondary);
+      font-weight: 600;
+    }
+  }
+}
+
+// ─── 动效：复制按钮反馈 ─────────────────────────
+// Quartz 自带的复制按钮在点击后切换图标，这里追加弹跳 + toast
+.clipboard-button.bounce {
+  animation: copyBounce 0.25s ease;
+}
+@keyframes copyBounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+// ─── Toast ──────────────────────────────────────
+.toast-container {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1100;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: center;
+}
+.toast {
+  background: var(--dark);
+  color: var(--light);
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-family: var(--bodyFont);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+
+  &.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ─── 返回顶部按钮 ───────────────────────────────
+.back-to-top {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--lightgray);
+  background: var(--light);
+  color: var(--dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  z-index: 999;
+
+  &.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  &:hover {
+    background: var(--lightgray);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
+  }
+}
+
+// ─── dappled-light：jzhao.xyz 风格的百叶窗 + 树叶 ───
+// 移植自 https://github.com/jackyzha0/jackyzha0.github.io
+// 组件：右上角光源 glow / 反弹光 glow-bounce / 透视的树叶 + 百叶窗 / 渐进模糊
+// body.animation-ready 类由 themechange 事件后加上，触发日出/日落颜色补间
+
+#quartz-root {
+  isolation: isolate;
+}
+
+#dappled-light {
+  animation-duration: 0s;
+  animation-fill-mode: forwards;
+  animation-timing-function: linear;
+  pointer-events: none;
+  position: fixed;
+  height: 100%;
+  width: 100%;
+  isolation: isolate;
+
+  --day: #fffdfa;
+  --evening: #fccc83;
+  --dusk: #db7a2a;
+  --night: #0f131c;
+  --dawn: #16132b;
+  --morning: #9fb3bf;
+
+  --shadow: #1a1917;
+  --bounce-light: #fffffc;
+  --timing-fn: cubic-bezier(0.455, 0.19, 0, 0.985);
+
+  body.animation-ready & {
+    animation-play-state: running;
+    animation-duration: 1s;
+    animation-name: sunrise;
+  }
+
+  [saved-theme="dark"] body.animation-ready & {
+    animation-duration: 1.5s;
+    animation-name: sunset;
+  }
+
+  [saved-theme="dark"] & {
+    --shadow: #030307;
+    --bounce-light: #1b293f;
+  }
+
+  & > #progressive-blur {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+
+    & > div {
+      position: absolute;
+      height: 100%;
+      width: 100%;
+      backdrop-filter: blur(var(--blur-amount));
+      mask-image: linear-gradient(
+        252deg,
+        transparent,
+        transparent var(--stop1),
+        black var(--stop2),
+        black
+      );
+
+      &:nth-child(1) {
+        --blur-amount: 8px;
+        --stop1: 0%;
+        --stop2: 0%;
+      }
+
+      &:nth-child(2) {
+        --blur-amount: 72px;
+        --stop1: 30%;
+        --stop2: 60%;
+      }
+    }
+  }
+
+  #glow {
+    position: absolute;
+    background: linear-gradient(309deg, var(--bounce-light), var(--bounce-light) 20%, transparent);
+    transition: background 1s var(--timing-fn);
+    height: 100%;
+    width: 100%;
+    opacity: 0.5;
+  }
+
+  #glow-bounce {
+    content: "";
+    position: absolute;
+    background: linear-gradient(355deg, var(--bounce-light) 0%, transparent 30%, transparent 100%);
+    transition: background 1s var(--timing-fn);
+    opacity: 0.5;
+    height: 100%;
+    width: 100%;
+    bottom: 0;
+  }
+
+  & > .perspective {
+    position: absolute;
+    transition:
+      transform 1.7s var(--timing-fn),
+      opacity 4s ease;
+    top: -30vh;
+    right: 0;
+    width: 80vw;
+    height: 130vh;
+    opacity: 0.07;
+    background-blend-mode: darken;
+    transform-origin: top right;
+    transform-style: preserve-3d;
+    transform: matrix3d(0.75, -0.0625, 0, 0.0008, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+
+    [saved-theme="dark"] & {
+      opacity: 0.3;
+      transform: matrix3d(0.8333, 0.0833, 0, 0.0003, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+    }
+  }
+
+  #leaves {
+    position: absolute;
+    background-size: cover;
+    background-repeat: no-repeat;
+    bottom: 0px;
+    right: -600px;
+    width: 1600px;
+    height: 1400px;
+    background-image: url("/static/leaves.png");
+    perspective: 400px;
+    animation: billow 8s ease-in-out infinite;
+  }
+
+  #blinds {
+    position: relative;
+    width: 100%;
+
+    & .shutter,
+    & .bar {
+      background-color: var(--shadow);
+    }
+
+    & .shutter {
+      width: 100%;
+      height: 40px;
+      transition: height 1s var(--timing-fn);
+
+      [saved-theme="dark"] & {
+        height: 80px;
+      }
+    }
+
+    & .shutters {
+      display: flex;
+      flex-direction: column;
+      align-items: end;
+      gap: 60px;
+      transition: gap 1s var(--timing-fn);
+
+      [saved-theme="dark"] & {
+        gap: 20px;
+      }
+    }
+
+    & > .vertical {
+      top: 0;
+      position: absolute;
+      height: 100%;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+
+      & > .bar {
+        width: 12px;
+        height: 100%;
+      }
+    }
+  }
+}
+
+@keyframes sunrise {
+  0% {
+    background-color: var(--night);
+  }
+  10% {
+    background-color: var(--dawn);
+  }
+  35% {
+    background-color: var(--morning);
+  }
+  100% {
+    background-color: var(--day);
+  }
+}
+
+@keyframes sunset {
+  0% {
+    background-color: var(--day);
+  }
+  30% {
+    background-color: var(--evening);
+  }
+  60% {
+    background-color: var(--dusk);
+  }
+  90% {
+    background-color: var(--dawn);
+  }
+  100% {
+    background-color: var(--night);
+  }
+}
+
+@keyframes billow {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg) scale(1);
+  }
+  18% {
+    transform: rotateX(1deg) rotateY(2deg) scale(1.03);
+  }
+  32% {
+    transform: rotateX(-4deg) rotateY(-2deg) scale(0.96);
+  }
+  66% {
+    transform: rotateX(3deg) rotateY(-1deg) scale(1.04);
+  }
+  100% {
+    transform: rotateX(0deg) rotateY(0deg) scale(1);
+  }
+}
+
+// ─── 响应式 iframe 嵌入（YouTube / Vimeo 等） ─────
+// 用法：<div class="video-embed"><iframe src="..."></iframe></div>
+// 16:9 比例，自动撑满正文宽度
+.video-embed {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; // 16:9
+  height: 0;
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--lightgray);
+
+  iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+}
+
+// 原生视频/音频统一样式
+article video,
+article audio {
+  width: 100%;
+  margin: 1rem 0;
+  border-radius: 6px;
+  display: block;
+}
+article video {
+  background: black;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+// X / Twitter 嵌入容器居中
+article .twitter-tweet {
+  margin: 1.5rem auto !important;
+}
+
+// ─── 标签 / 面包屑 hover 微动 ────────────────────
+article a.tag-link,
+.breadcrumb-container a {
+  display: inline-block;
+  transition: transform 0.15s ease, color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
 }

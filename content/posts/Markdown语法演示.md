@@ -126,12 +126,98 @@ description: 集中演示 Quartz 支持的全部 Markdown 渲染特性，方便�
 
 ### 5.5 视频与音频嵌入
 
+> [!warning] OFM 的 `![[]]` 写法对本地视频/音频有坑
+>
+> Obsidian 风格 `![[demo.mp4]]` 会被 Quartz 转成 `<video src="demo.mp4" controls>`，但 src 不会走 CrawlLinks 路径修正，浏览器会按当前页面解析成相对路径 404。
+>
+> **本地媒体一律用裸 HTML + 根相对路径**：
+
 ```markdown
-![[demo.mp4]]      → 自动渲染 <video controls>
-![[song.mp3]]      → 自动渲染 <audio controls>
+<video controls width="100%" preload="metadata">
+  <source src="/attachments/demo.mp4" type="video/mp4">
+</video>
+
+<audio controls preload="metadata">
+  <source src="/attachments/song.mp3" type="audio/mpeg">
+</audio>
 ```
 
-支持 mp4/webm/mov/mkv/ogv 和 mp3/wav/m4a/ogg/flac 等格式。
+要求：文件放在 `content/attachments/`（Quartz 的 `Assets` emitter 会自动拷贝到 `public/`），src 写**带前导斜杠的根相对路径**。
+
+### 5.6 远程大图（测试懒加载 + lightbox 缩放）
+
+下面四张是高分辨率远程图（2000+ 像素），用来验证：① `loading="lazy"` 视口外不下载；② 客户端兜底注入 W/H 后瀑布流不抖动；③ lightbox 打开后能完整放大查看；④ 滚动到视口内才触发渲染。
+
+<div class="image-masonry">
+<img src="https://picsum.photos/seed/big1/2400/1600" alt="">
+<img src="https://picsum.photos/seed/big2/2000/2400" alt="">
+<img src="https://picsum.photos/seed/big3/2400/1200" alt="">
+<img src="https://picsum.photos/seed/big4/1800/2400" alt="">
+</div>
+
+### 5.7 远程视频（HTML `<video>` 直接嵌）
+
+本地或远程都用裸 HTML 最稳（见 § 5.5 的坑说明）：
+
+<video controls preload="metadata" width="100%" poster="https://picsum.photos/seed/poster/1280/720">
+  <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+  你的浏览器不支持 HTML5 video。
+</video>
+
+*视频源：Big Buck Bunny（CC-BY 3.0，Google 公共桶）。`preload="metadata"` 表示只下载视频元信息（封面、时长），不预加载内容，节省带宽。*
+
+### 5.8 远程音频
+
+<audio controls preload="metadata">
+  <source src="https://download.samplelib.com/mp3/sample-15s.mp3" type="audio/mpeg">
+  你的浏览器不支持 HTML5 audio。
+</audio>
+
+*samplelib.com 的 15 秒测试音频。*
+
+### 5.9 YouTube 嵌入
+
+裸 `<iframe>` 包在 `.video-embed` 容器里实现 16:9 响应式：
+
+<div class="video-embed">
+<iframe src="https://www.youtube-nocookie.com/embed/jNQXAC9IVRw" title="Me at the zoo" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>
+</div>
+
+*"Me at the zoo"——YouTube 上传的第一支视频（2005 年）。用 `youtube-nocookie.com` 域名而不是 `youtube.com`，加载更少追踪 cookie，更合规。`loading="lazy"` 让首屏不阻塞。*
+
+### 5.10b 本地视频 / 音频（治本插件验证）
+
+下面两个媒体是真实本地文件（`content/attachments/`），用 Obsidian `![[]]` 写法。`MediaPaths` 插件会自动注入 `controls` + `preload="metadata"`，CrawlLinks + MediaPaths 会修 src 为根相对路径。
+
+**本地视频（`![[attachments/sample-5s.mp4]]`）：**
+
+![[attachments/sample-5s.mp4]]
+
+**本地音频（`![[attachments/sample-3s.mp3]]`）：**
+
+![[attachments/sample-3s.mp3]]
+
+打开 DevTools 看：
+- `<video>` / `<audio>` 都有 `controls` 和 `preload="metadata"` 属性
+- `src` 路径正确指向 `/attachments/...`
+- Network 面板能看到 2.7MB mp4 和 51KB mp3 各请求一次，状态 200
+
+### 5.10 X / Twitter 嵌入
+
+Twitter 官方 embed 走 `<blockquote class="twitter-tweet">` + 一个 widgets.js 脚本。X 改名后接口仍然兼容：
+
+<blockquote class="twitter-tweet" data-theme="light">
+  <p lang="en">just setting up my twttr</p>
+  &mdash; jack (@jack) <a href="https://twitter.com/jack/status/20">March 21, 2006</a>
+</blockquote>
+<script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+> [!warning] 嵌入限制
+>
+> - **需要联网**：widgets.js 从 Twitter/X 加载，被墙 / 拦截时不会渲染（会留下 blockquote 原始文字 + 链接 fallback）
+> - **跨站脚本 + cookie**：会被部分隐私插件（uBlock 等）拦截
+> - **不要嵌太多**：每条都创建独立 iframe，5+ 会拖累首屏
+> - **替代方案**：截图 + 链接到原推；或用 [react-tweet](https://react-tweet.vercel.app/) 构建时静态化（需引入新依赖）
 
 ## 6. 代码
 
