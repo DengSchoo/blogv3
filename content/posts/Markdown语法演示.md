@@ -277,7 +277,7 @@ const config = {
   configuration: {
     pageTitle: "我的数字花园", // 这一行会被高亮
     locale: "zh-CN",
-    baseUrl: "example.com",
+    baseUrl: "dengsh.me",
   },
 }
 ```
@@ -290,7 +290,7 @@ const config = {
   configuration: {
     pageTitle: "我的数字花园",
     locale: "zh-CN",
-    baseUrl: "example.com",
+    baseUrl: "dengsh.me",
   },
 }
 ```
