@@ -4,6 +4,22 @@ import mediumZoom from "medium-zoom"
 // 图片加载淡入、复制按钮反馈、返回顶部。
 // 由 Enhancements 组件通过 afterDOMLoaded 注入；客户端运行。
 
+// medium-zoom 在模块加载时通过 styleInject 往 <head> 注入一个 <style>，
+// 提供 .medium-zoom-overlay 的 position:fixed 和 opacity 过渡。spa.inline.ts 在
+// SPA 跳转时会清掉所有不带 data-persist 的 head 子元素，那个注入样式就一起没了；
+// 而 styleInject 在模块顶层只跑一次，跳转后不会再注入。结果就是首次 SPA 跳转后
+// 点击图片，overlay 没遮罩、点空白处也关不掉，刷新整页才恢复。
+// 这里把它打上 data-persist，让 spa.inline.ts 跳过它。
+;(function persistMediumZoomStyle() {
+  const styles = document.head.querySelectorAll("style")
+  for (const s of styles) {
+    if (s.textContent && s.textContent.includes(".medium-zoom-overlay")) {
+      s.setAttribute("data-persist", "")
+      break
+    }
+  }
+})()
+
 let zoomInstance: ReturnType<typeof mediumZoom> | null = null
 
 function initZoom() {
